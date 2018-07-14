@@ -6,48 +6,54 @@ output:
 ---
 
 ## Loading and preprocessing the data
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-steps<-read.csv("/Applications/Old Computer/DataScience/05-Reproducible Research/activity.csv")
-steps$date<-as.Date(steps$date, "%Y-%m-%d")
-total<-aggregate(steps$steps~steps$date, FUN=sum)
-names(total)<-c("date", "steps")
-total$version<-"with na"
-```
+
 
 ##Mean Steps Per Day
 
-```{r}
+
+```r
 library(ggplot2)
 g<-ggplot(data=total, aes(y=total$steps, x=total$date))
 g+geom_col()+theme_bw()+labs(y="Total Steps per Day", x="Date")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-1-1.png)<!-- -->
+
+```r
 mn<-mean(total$steps)
 mdn<-median(total$steps)
 ```
 
-The mean and median of the total number of steps taken per day are `r toString(mn)` and `r mdn` respectively
+The mean and median of the total number of steps taken per day are 10766.1886792453 and 10765 respectively
 
 ##Daily Activity Pattern
 
 
-```{r}
+
+```r
 int<-aggregate(steps~interval, data=steps, FUN=mean)
 p<-ggplot(data=int, aes(y=int$steps, x=int$interval))
 p+geom_line()+theme_bw()+labs(x="Interval", y="Average Steps")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
+
+```r
 max_int<-int$interval[max(int$steps)]
 ```
 
 The average daily activity pattern is little to no activity between intervals 0-500. This corresponds to the middle of the night and early morning when people are often asleep. This is followed by a burst of activity in the morning between intervals 600-1000. After this burst in activity, the step number vacillates throughout the day centered around 50 total steps per interval until interval 2000. After interval 2000, the activity tapers off gradually to 0, again presumably as people go to bed.
 
-The 5-minute interval, on average across all the days in the dataset, that contains the maximum number of steps is `r max_int`
+The 5-minute interval, on average across all the days in the dataset, that contains the maximum number of steps is 1705
 
 ##Imputing Missing Values
 
-```{r}
+
+```r
 total_na<-length(which(is.na(steps$steps)))
 ```
 
-The total number of missing "steps" values in the dataset is `r total_na`
+The total number of missing "steps" values in the dataset is 2304
 
 I'm going to use the package MICE (Multivariate Imputation via Chained Equations) to impute the missing data. MICE is one of the commonly used package by R users. Creating multiple imputations as compared to a single imputation (such as mean) takes care of uncertainty in missing values.
 
@@ -55,13 +61,15 @@ MICE assumes that the missing data are Missing at Random (MAR), which means that
 
 The package uses a combination of linear regression and PMM (Predictive Mean Matching) for continuous numeric variables. It then provides 5 different data sets that differ only in the imputed variables. You can then randomly select 1 of the 5 datasets or combine the information from all 5. For simplicity, I have simply selected the second imputed date set.
 
-```{r, results="hide", message=FALSE}
+
+```r
 library(mice)
 imputed<-mice(steps, m=5)
 complete_steps<-complete(imputed, 2)
 ```
 
-```{r}
+
+```r
 total2<-aggregate(complete_steps$steps~complete_steps$date, FUN=sum)
 names(total2)<-c("date", "steps")
 total2$version<-"imputed"
@@ -70,17 +78,21 @@ mdn2<-median(total2$steps)
 ```
 
 
-After replacing missing values with imputed values, the mean total number of steps taken per day is `r toString(mn2)` as compared to `r toString(mn)`. The median total number of steps taken per day is `r mdn2` as compared to `r mdn`. In addition, while the gaps have been filled in by including imputed values, the shape of the histogram for total steps taken per day looks similar.
+After replacing missing values with imputed values, the mean total number of steps taken per day is 10944.6393442623 as compared to 10766.1886792453. The median total number of steps taken per day is 11015 as compared to 10765. In addition, while the gaps have been filled in by including imputed values, the shape of the histogram for total steps taken per day looks similar.
 
-```{r}
+
+```r
 compare<-rbind(total, total2)
 b<-ggplot(data=compare, aes(y=steps, x=date, fill=version))
 b+geom_col()+facet_wrap(~version, ncol=1, nrow=2)+theme_bw()+labs(y="Total Steps per Day", x="Date")
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
 ##Weekday vs Weekend Activity
 
-```{r}
+
+```r
 complete_steps$weekday<-NA
 for(i in 1:length(complete_steps$weekday)){
     if (weekdays(complete_steps$date[i])=="Saturday"){
@@ -96,5 +108,7 @@ w<-ggplot(data=week, aes(x=interval, y=steps))+geom_line()
 w+facet_wrap(~weekday, ncol=1, nrow=2)+theme_bw()+labs(y="Average Number of Steps")
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
-The activity patterns vary between weekdays and weekends. Actvitiy starts much earlier during weekdays and has an obvious spike in steps. The weekends however have a more gradual increase in total steps and maintain generally higher levels of total steps throughout the day. Indeed both the mean and median total number of steps is higher on the weekends at `r mean((subset(week, week$weekday=="weekend"))$steps)` and `r median((subset(week, week$weekday=="weekend"))$steps)` respectively compared to the mean and median for weekdays which are `r mean((subset(week, week$weekday=="weekday"))$steps)` and `r median((subset(week, week$weekday=="weekday"))$steps)` respectively.
+
+The activity patterns vary between weekdays and weekends. Actvitiy starts much earlier during weekdays and has an obvious spike in steps. The weekends however have a more gradual increase in total steps and maintain generally higher levels of total steps throughout the day. Indeed both the mean and median total number of steps is higher on the weekends at 44.2371962 and 35.75 respectively compared to the mean and median for weekdays which are 35.7853395 and 27.4 respectively.
